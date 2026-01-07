@@ -213,11 +213,10 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 %:
 	dh \$@
 
+override_dh_autoreconf:
+	true
+
 override_dh_auto_configure:
-	echo \\
-$(printf '%s\n' "$CONFIGURE_ARGS" \
- | sed '$!s/$/ \\/' \
- | sed 's/^/\t\t/')
 	./configure \\
 $(printf '%s\n' "$CONFIGURE_ARGS" \
  | sed '$!s/$/ \\/' \
@@ -228,13 +227,6 @@ $(printf '%s\n' "$CONFIGURE_ARGS" \
 		sed -i 's/^GITTAG=.*\$\$/GITTAG=		echo 小喾苦/' 'Makefile'; \\
 		sed -i 's/^GITBRANCH=.*\$\$/GITBRANCH=	echo 小喾苦/' 'Makefile'; \\
 	fi
-
-
-override_dh_auto_build:
-	\$(MAKE) -j\$(shell nproc)
-
-override_dh_auto_install:
-	\$(MAKE) DESTDIR=\$(CURDIR)/debian/${DEB_PACKAGE_NAME} install
 EOF
 chmod 0755 'debian/rules'
 
