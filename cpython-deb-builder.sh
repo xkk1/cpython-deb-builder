@@ -14,11 +14,11 @@ set -e
 set -u
 
 # 版本号
-VERSION="0.0.0"
+version='0.0.0'
 # 配置文件
-CONFIG_FILE=
+config_file=
 # 帮助信息
-USAGE=$(cat << EOF
+usage=$(cat << EOF
 用法：$0 [选项]
 选项：
     -h, --help, --帮助      显示帮助信息
@@ -32,20 +32,20 @@ EOF
 while [ $# -gt 0 ]; do
     case "$1" in
         -h|--help|--帮助)
-            printf '%s\n' "$USAGE"
+            printf '%s\n' "$usage"
             exit 0
             ;;
         -v|--version|--版本)
-            printf 'v%s\n' "$VERSION"
+            printf 'v%s\n' "$version"
             exit 0
             ;;
         -c|--config)
             if [ -f "$2" ]; then
                 . "$2"
-                if [ -n "$CONFIG_FILE" ]; then
-                    CONFIG_FILE="${CONFIG_FILE}:$2"
+                if [ -n "$config_file" ]; then
+                    config_file="${config_file}:$2"
                 else
-                    CONFIG_FILE="$2"
+                    config_file="$2"
                 fi
             else
                 printf '配置文件不存在: %s\n' "$2" >&2
@@ -54,11 +54,11 @@ while [ $# -gt 0 ]; do
             shift 2
             ;;
         --disable-gil)
-            FREE_THREADED="true"
+            free_threaded="true"
             shift
             ;;
         --enable-gil)
-            FREE_THREADED="false"
+            free_threaded="false"
             shift
             ;;
         --)
@@ -66,7 +66,7 @@ while [ $# -gt 0 ]; do
             break
             ;;
         -*)
-            printf '%s: %s: 无效的选项\n%s\n' "$0" "$1" "$USAGE" >&2
+            printf '%s: %s: 无效的选项\n%s\n' "$0" "$1" "$usage" >&2
             exit 2
             ;;
         *)
@@ -77,50 +77,50 @@ done
 
 # 默认配置
 # 准备 Python 源码文件 Python-x.y.z.tar.xz，没有脚本从官网下载
-PY_MAJOR="${PY_MAJOR:-3}"  # 主版本 x
-PY_MINOR="${PY_MINOR:-14}"  # 副版本 y
-PY_MICRO="${PY_MICRO:-2}"  # 小版本 z
-PY_RELEASE="${PY_RELEASE:-}"  # 可选: a1(alpha), b1(beta), rc1, 空字符串表示稳定版
+py_major="${py_major:-3}"  # 主版本 x
+py_minor="${py_minor:-14}"  # 副版本 y
+py_micro="${py_micro:-2}"  # 小版本 z
+py_release="${py_release:-}"  # 可选: a1(alpha), b1(beta), rc1, 空字符串表示稳定版
 # 动态拼接 Python 主版本号 x.y --- 3.14
-PY_MAIN_VERSION="${PY_MAIN_VERSION:-${PY_MAJOR}.${PY_MINOR}}"
+py_main_version="${py_main_version:-${py_major}.${py_minor}}"
 # 动态拼接 Python 完整版本号 x.y.z --- 3.14.2
-PY_FULL_VERSION="${PY_FULL_VERSION:-${PY_MAIN_VERSION}.${PY_MICRO}${PY_RELEASE}}"
+py_full_version="${py_full_version:-${py_main_version}.${py_micro}${py_release}}"
 # python 源码文件
-PY_SRC="Python-${PY_FULL_VERSION}.tar.xz"
+PY_SRC="Python-${py_full_version}.tar.xz"
 # 是否启用 free-threaded (no GIL) 支持，默认关闭 'false' 启用 ‘true'
-FREE_THREADED="${FREE_THREADED:-false}"
+free_threaded="${free_threaded:-false}"
 # 打包者
-PACKAGER="${PACKAGER:-xkk}"
-MAINTAINER="${MAINTAINER:-${PACKAGER} <xkk1@120107.xyz>}"
+packager="${packager:-xkk}"
+maintainer="${maintainer:-${packager} <xkk1@120107.xyz>}"
 # Debian 包修订版本号
-DEBIAN_REVISION="1${PACKAGER}1"
-# GPG 签名，不使用将 SIGN_KEY 设置为空
-# SIGN_KEY="${SIGN_KEY:-BDB382089DBA3BE895E744712272FE35343C6BC8}"
-SIGN_KEY="${SIGN_KEY:-}"
-# 构建类型 dpkg-buildpackage --build=$BUILD_TYPE
+debian_revision="1${packager}1"
+# GPG 签名，不使用将 sign_key 设置为空
+# sign_key="${sign_key:-BDB382089DBA3BE895E744712272FE35343C6BC8}"
+sign_key="${sign_key:-}"
+# 构建类型 dpkg-buildpackage --build=$build_type
 # 可选参数:
 #   full: 默认值，包含所有文件
 #   binary: 只包含可执行文件
 #   source: 只包含源码文件
-BUILD_TYPE="${BUILD_TYPE:-full}"
+build_type="${build_type:-full}"
 # 构建完，删除源码文件 默认'false'
-CLEANUP_SOURCE="${CLEANUP_SOURCE:-true}"
+cleanup_source="${cleanup_source:-true}"
 # 构建完，删除构建临时文件标志变量 默认'true'
-CLEANUP_BUILD_TEMP="${CLEANUP_BUILD_TEMP:-true}"
+cleanup_build_temp="${cleanup_build_temp:-true}"
 
 # 安装目录
-PREFIX="${PREFIX:-/usr/lib/python${PY_MAIN_VERSION}-${PACKAGER}}"
+prefix="${prefix:-/usr/lib/python${py_main_version}-${packager}}"
 # 配置参数
-if [ -z "${CONFIGURE_ARGS+set}" ]; then
-    CONFIGURE_ARGS=$(cat << EOF
---prefix=${PREFIX}
+if [ -z "${configure_args+set}" ]; then
+    configure_args=$(cat << EOF
+--prefix=${prefix}
 EOF
 )
 fi
 # free-threaded (no GIL) 配置参数
-if [ -z "${FREE_THREADED_CONFIGURE_ARGS+set}" ]; then
-    FREE_THREADED_CONFIGURE_ARGS=$(cat << EOF
---prefix=${PREFIX}
+if [ -z "${free_threaded_configure_args+set}" ]; then
+    free_threaded_configure_args=$(cat << EOF
+--prefix=${prefix}
 --disable-gil
 EOF
 )
@@ -131,99 +131,100 @@ fi
 # GITTAG=		git --git-dir $(srcdir)/.git describe --all --always --dirty
 # GITBRANCH=	git --git-dir $(srcdir)/.git name-rev --name-only HEAD
 GITVERSION="${GITVERSION:-}"
-GITTAG="${GITTAG:-echo tags/v${PY_FULL_VERSION}}"
+GITTAG="${GITTAG:-echo tags/v${py_full_version}}"
 GITBRANCH="${GITBRANCH:-echo main}"
 # platform.python_revision() = GITVERSION or ''
 # platform.python_build()[0] = GITTAG + ':' + GITVERSION or GITTAG or 'main:' + GITVERSION or GITBRANCH or 'main'
 # platform.python_branch() = GITTAG or GITBRANCH
 
-# 根据 FREE_THREADED 选项添加 nogil 标记
-if [ "$FREE_THREADED" = "true" ]; then
-    CONFIGURE_ARGS="${FREE_THREADED_CONFIGURE_ARGS}"
-    VERSION_VARIANT_SUFFIX="${VERSION_VARIANT_SUFFIX:-+nogil}"
-    PACKAGE_VARIANT_SUFFIX="${PACKAGE_VARIANT_SUFFIX:--nogil}"
+# 根据 free_threaded 选项添加 nogil 标记
+if [ "$free_threaded" = "true" ]; then
+    configure_args="${free_threaded_configure_args}"
+    version_variant_suffix="${version_variant_suffix:-+nogil}"
+    package_variant_suffix="${package_variant_suffix:--nogil}"
     # python 可执行文件后缀
-    EXECUTABLE_VARIANT_SUFFIX="${EXECUTABLE_VARIANT_SUFFIX:-t}"
+    executable_variant_suffix="${executable_variant_suffix:-t}"
 else
-    VERSION_VARIANT_SUFFIX="${VERSION_VARIANT_SUFFIX:-}"
-    PACKAGE_VARIANT_SUFFIX="${PACKAGE_VARIANT_SUFFIX:-}"
-    EXECUTABLE_VARIANT_SUFFIX="${EXECUTABLE_VARIANT_SUFFIX:-}"
+    version_variant_suffix="${version_variant_suffix:-}"
+    package_variant_suffix="${package_variant_suffix:-}"
+    executable_variant_suffix="${executable_variant_suffix:-}"
 fi
 
 # deb 包名
-DEB_PACKAGE_NAME="${DEB_PACKAGE_NAME:-python${PY_MAIN_VERSION}-${PACKAGER}${PACKAGE_VARIANT_SUFFIX}}"
+deb_package_name="${deb_package_name:-python${py_main_version}-${packager}${package_variant_suffix}}"
 # deb 包版本号
-DEB_PACKAGE_VERSION="${DEB_PACKAGE_VERSION:-${PY_FULL_VERSION}-${DEBIAN_REVISION}}"
+deb_package_version="${deb_package_version:-${py_full_version}-${debian_revision}}"
 # 架构
-ARCH="${ARCH:-$(dpkg --print-architecture)}"
+arch="${arch:-$(dpkg --print-architecture)}"
 # 构建目录，构建产物在构建目录的上层目录
-BUILD_DIR="${BUILD_DIR:-$(pwd -P)/${DEB_PACKAGE_NAME}}"
-# 产物目录（构建目录的上级）
-OUTPUT_DIR="${OUTPUT_DIR:-$(dirname "$BUILD_DIR")}"
+build_dir="${build_dir:-$(pwd -P)/${deb_package_name}}"
+
 
 # 输出构建信息
 echo "============ CPython Debian 自动打包脚本 ============"
-printf '%s' "自动打包脚本: v${VERSION}"
-if [ -n "${CONFIG_FILE}" ]; then
-    printf '\n%s\n' "配置文件: ${CONFIG_FILE}"
+printf '%s' "自动打包脚本: v${version}"
+if [ -n "${config_file}" ]; then
+    printf '\n%s\n' "配置文件: ${config_file}"
 else
     printf '%s\n' "，使用默认配置"
 fi
-echo "Python 版本号: ${PY_FULL_VERSION}"
-echo "free-threaded (no GIL) 支持: ${FREE_THREADED}"
-echo "deb 包名: ${DEB_PACKAGE_NAME}"
-echo "deb 包架构: ${ARCH}"
-echo "deb 包版本号: ${DEB_PACKAGE_VERSION}"
-echo "Maintainer: ${MAINTAINER}"
-echo "安装前缀: ${PREFIX}"
-echo "构建目录: ${BUILD_DIR}"
-echo "产物目录: ${OUTPUT_DIR}"
+echo "Python 版本号: ${py_full_version}"
+echo "free-threaded (no GIL) 支持: ${free_threaded}"
+echo "deb 包名: ${deb_package_name}"
+echo "deb 包架构: ${arch}"
+echo "deb 包版本号: ${deb_package_version}"
+echo "Maintainer: ${maintainer}"
+echo "安装前缀: ${prefix}"
+echo "构建目录: ${build_dir}"
+# 产物目录（构建目录的上级）
+output_dir="$(dirname "$build_dir")"
+echo "产物目录: ${output_dir}"
 echo "配置参数: ./configure \\"
-echo "$(printf '%s\n' "$CONFIGURE_ARGS" \
+echo "$(printf '%s\n' "$configure_args" \
  | sed '$!s/$/ \\/' \
  | sed 's/^/\t/')"
-echo "构建类型: dpkg-buildpackage --build=${BUILD_TYPE}"
-if [ -n "$SIGN_KEY" ]; then
-    echo "签名密钥: ${SIGN_KEY}"
+echo "构建类型: dpkg-buildpackage --build=${build_type}"
+if [ -n "$sign_key" ]; then
+    echo "签名密钥: ${sign_key}"
 else
     echo "不启用签名"
 fi
-echo "构建完，删除源码文件: ${CLEANUP_SOURCE}"
-echo "构建完，删除构建临时文件: ${CLEANUP_BUILD_TEMP}"
+echo "构建完，删除源码文件: ${cleanup_source}"
+echo "构建完，删除构建临时文件: ${cleanup_build_temp}"
 echo "===================================================="
 printf '%s' "准备生成构建环境，确认信息无误后按 Enter 继续..."
 read _
 
 # 确定产物目录存在
-mkdir -p "$OUTPUT_DIR"
+mkdir -p "$output_dir"
 
 # 生成 Debian 上游源码包 orig.tar.xz
-ORIG_TARBALL="${OUTPUT_DIR}/${DEB_PACKAGE_NAME}_${PY_FULL_VERSION}.orig.tar.xz"
-if [ ! -f "$ORIG_TARBALL" ]; then
-    echo "生成 Debian 上游源码包 $ORIG_TARBALL"
+orig_tarball="${output_dir}/${deb_package_name}_${py_full_version}.orig.tar.xz"
+if [ ! -f "$orig_tarball" ]; then
+    echo "生成 Debian 上游源码包 $orig_tarball"
     # 这里用 Python 源码文件生成 orig.tar.xz
     if [ ! -f "$PY_SRC" ]; then
         pwd
         echo "未找到 Python 源码文件，正在下载源码文件保存到：${PY_SRC}"
-        wget "https://www.python.org/ftp/python/${PY_FULL_VERSION}/Python-${PY_FULL_VERSION}.tar.xz" \
+        wget "https://www.python.org/ftp/python/${py_full_version}/Python-${py_full_version}.tar.xz" \
             -O "$PY_SRC"
     fi
-    cp "$PY_SRC" "$ORIG_TARBALL"
+    cp "$PY_SRC" "$orig_tarball"
     echo "生成完成"
 else
-    echo "上游源码包 $ORIG_TARBALL 已存在"
+    echo "上游源码包 $orig_tarball 已存在"
 fi
 
 # 创建构建目录
-rm -rf "$BUILD_DIR"
-mkdir -p "$BUILD_DIR"
-cd "$BUILD_DIR"
+rm -rf "$build_dir"
+mkdir -p "$build_dir"
+cd "$build_dir"
 
 # 解压 Python 源码
 echo '正在解压 Python 源码文件'
-tar -axf "$ORIG_TARBALL" \
+tar -axf "$orig_tarball" \
     --strip-components=1 \
-    -C "$BUILD_DIR"
+    -C "$build_dir"
 echo '解压 Python 源码文件完成'
 
 
@@ -234,10 +235,10 @@ mkdir -p "debian"
 echo '创建 debian/control'
 cat > 'debian/control' << EOF
 # 源码包
-Source: ${DEB_PACKAGE_NAME}
+Source: ${deb_package_name}
 Section: python
 Priority: optional
-Maintainer: ${MAINTAINER}
+Maintainer: ${maintainer}
 Rules-Requires-Root: no
 Build-Depends:
  debhelper-compat (= 13),
@@ -260,19 +261,19 @@ Build-Depends:
  libzstd-dev,
 Standards-Version: 4.6.2
 Homepage: https://www.python.org/
-#Vcs-Browser: https://salsa.debian.org/debian/${DEB_PACKAGE_NAME}
-#Vcs-Git: https://salsa.debian.org/debian/${DEB_PACKAGE_NAME}.git
+#Vcs-Browser: https://salsa.debian.org/debian/${deb_package_name}
+#Vcs-Git: https://salsa.debian.org/debian/${deb_package_name}.git
 
 # 二进制包
-Package: ${DEB_PACKAGE_NAME}
-Architecture: ${ARCH}
+Package: ${deb_package_name}
+Architecture: ${arch}
 Multi-Arch: same
 Depends:
  \${shlibs:Depends},
  \${misc:Depends},
-Description: Custom CPython ${PY_MAIN_VERSION} interpreter (${PACKAGER} build)
- Custom-built CPython ${PY_MAIN_VERSION} interpreter compiled by ${PACKAGER}.
- This package provides the python${PY_MAIN_VERSION} executable with
+Description: Custom CPython ${py_main_version} interpreter (${packager} build)
+ Custom-built CPython ${py_main_version} interpreter compiled by ${packager}.
+ This package provides the python${py_main_version} executable with
  a custom build configuration, separate from system Python.
 EOF
 
@@ -305,7 +306,7 @@ override_dh_autoreconf:
 
 override_dh_auto_configure:
 	./configure \\
-$(printf '%s\n' "$CONFIGURE_ARGS" \
+$(printf '%s\n' "$configure_args" \
  | sed '$!s/$/ \\/' \
  | sed 's/^/\t\t/')
 	# 修改 Python 编译信息
@@ -319,11 +320,11 @@ chmod 0755 'debian/rules'
 
 echo '创建 debian/changelog'
 cat > 'debian/changelog' << EOF
-${DEB_PACKAGE_NAME} (${DEB_PACKAGE_VERSION}) unstable; urgency=medium
+${deb_package_name} (${deb_package_version}) unstable; urgency=medium
 
   * Initial release.
 
- -- ${MAINTAINER}  $(date -R)
+ -- ${maintainer}  $(date -R)
 EOF
 
 mkdir -p 'debian/source'
@@ -336,7 +337,7 @@ EOF
 echo '创建 debian/postinst'
 cat > 'debian/postinst' << EOF
 #!/bin/sh
-# postinst script for ${DEB_PACKAGE_NAME}.
+# postinst script for ${deb_package_name}.
 #
 # See: dh_installdeb(1).
 
@@ -354,7 +355,7 @@ set -e
 # for details, see https://www.debian.org/doc/debian-policy/ or
 # the debian-policy package.
 
-SRC_DIR="${PREFIX}/bin"
+SRC_DIR="${prefix}/bin"
 
 case "\$1" in
     configure)
@@ -367,8 +368,8 @@ case "\$1" in
         for f in "\$SRC_DIR"/*; do
             name=\$(basename "\$f")
             dst1="/usr/bin/\$name"
-            dst2="/usr/bin/\${name}-${PACKAGER}"
-            dst3="\$SRC_DIR/\${name}-${PACKAGER}"
+            dst2="/usr/bin/\${name}-${packager}"
+            dst3="\$SRC_DIR/\${name}-${packager}"
 
             # 跳过非文件
             [ -f "\$f" ] || continue
@@ -422,7 +423,7 @@ chmod 0755 'debian/postinst'
 echo '创建 debian/prerm'
 cat > 'debian/prerm' << EOF
 #!/bin/sh
-# prerm script for ${DEB_PACKAGE_NAME}.
+# prerm script for ${deb_package_name}.
 #
 # See: dh_installdeb(1).
 
@@ -439,7 +440,7 @@ set -e
 # for details, see https://www.debian.org/doc/debian-policy/ or
 # the debian-policy package.
 
-SRC_DIR="${PREFIX}/bin"
+SRC_DIR="${prefix}/bin"
 
 case "\$1" in
     remove|upgrade|deconfigure)
@@ -457,9 +458,9 @@ case "\$1" in
         esac
     done
 
-    # 2. 清理 \$SRC_DIR 中包含 ${PACKAGER} 的链接文件 -> \$SRC_DIR/*
+    # 2. 清理 \$SRC_DIR 中包含 ${packager} 的链接文件 -> \$SRC_DIR/*
     if [ -d "\$SRC_DIR" ]; then
-        for f in "\$SRC_DIR"/*${PACKAGER}*; do
+        for f in "\$SRC_DIR"/*${packager}*; do
             [ -L "\$f" ] || continue
             target=\$(readlink "\$f") || continue
 
@@ -493,12 +494,12 @@ chmod 0755 'debian/prerm'
 
 
 # 构建参数
-DPKG_ARGS="--build=$BUILD_TYPE"
+DPKG_ARGS="--build=$build_type"
 
 # 签名处理
-if [ -n "$SIGN_KEY" ]; then
-    echo "启用签名，GPG KEY = $SIGN_KEY"
-    DPKG_ARGS="$DPKG_ARGS -k$SIGN_KEY"
+if [ -n "$sign_key" ]; then
+    echo "启用签名，GPG KEY = $sign_key"
+    DPKG_ARGS="$DPKG_ARGS -k$sign_key"
 else
     echo "不启用签名"
     DPKG_ARGS="$DPKG_ARGS -us -uc"
@@ -513,15 +514,15 @@ read _
 dpkg-buildpackage $DPKG_ARGS
 
 # 前往构建产物目录——构建目录的上层目录
-cd "$OUTPUT_DIR"
+cd "$output_dir"
 
-if [ "$CLEANUP_BUILD_TEMP" = "true" ]; then
+if [ "$cleanup_build_temp" = "true" ]; then
     echo "正在清理构建临时文件"
-    rm -rf "$BUILD_DIR"
+    rm -rf "$build_dir"
     echo "清理完成"
 fi
 
-if [ "$CLEANUP_SOURCE" = "true" ]; then
+if [ "$cleanup_source" = "true" ]; then
     echo "正在清理源码"
     rm -rf "$PY_SRC"
     echo "清理完成"

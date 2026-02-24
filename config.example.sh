@@ -1,50 +1,50 @@
 #!./cpython-deb-builder.sh -c
 # 默认配置
 # 准备 Python 源码文件 Python-x.y.z.tar.xz，没有脚本从官网下载
-PY_MAJOR="${PY_MAJOR:-3}"  # 主版本 x
-PY_MINOR="${PY_MINOR:-14}"  # 副版本 y
-PY_MICRO="${PY_MICRO:-2}"  # 小版本 z
-PY_RELEASE="${PY_RELEASE:-}"  # 可选: a1(alpha), b1(beta), rc1, 空字符串表示稳定版
+py_major="${py_major:-3}"  # 主版本 x
+py_minor="${py_minor:-14}"  # 副版本 y
+py_micro="${py_micro:-2}"  # 小版本 z
+py_release="${py_release:-}"  # 可选: a1(alpha), b1(beta), rc1, 空字符串表示稳定版
 # 动态拼接 Python 主版本号 x.y --- 3.14
-PY_MAIN_VERSION="${PY_MAIN_VERSION:-${PY_MAJOR}.${PY_MINOR}}"
+py_main_version="${py_main_version:-${py_major}.${py_minor}}"
 # 动态拼接 Python 完整版本号 x.y.z --- 3.14.2
-PY_FULL_VERSION="${PY_FULL_VERSION:-${PY_MAIN_VERSION}.${PY_MICRO}${PY_RELEASE}}"
+py_full_version="${py_full_version:-${py_main_version}.${py_micro}${py_release}}"
 # python 源码文件
-PY_SRC="Python-${PY_FULL_VERSION}.tar.xz"
+PY_SRC="Python-${py_full_version}.tar.xz"
 # 是否启用 free-threaded (no GIL) 支持，默认关闭 'false' 启用 ‘true'
-FREE_THREADED="${FREE_THREADED:-false}"
+free_threaded="${free_threaded:-false}"
 # 打包者
-PACKAGER="${PACKAGER:-xkk}"
-MAINTAINER="${MAINTAINER:-${PACKAGER} <xkk1@120107.xyz>}"
+packager="${packager:-xkk}"
+maintainer="${maintainer:-${packager} <xkk1@120107.xyz>}"
 # Debian 包修订版本号
-DEBIAN_REVISION="1${PACKAGER}1"
-# GPG 签名，不使用将 SIGN_KEY 设置为空
-# SIGN_KEY="${SIGN_KEY:-BDB382089DBA3BE895E744712272FE35343C6BC8}"
-SIGN_KEY="${SIGN_KEY:-}"
-# 构建类型 dpkg-buildpackage --build=$BUILD_TYPE
+debian_revision="1${packager}1"
+# GPG 签名，不使用将 sign_key 设置为空
+# sign_key="${sign_key:-BDB382089DBA3BE895E744712272FE35343C6BC8}"
+sign_key="${sign_key:-}"
+# 构建类型 dpkg-buildpackage --build=$build_type
 # 可选参数:
 #   full: 默认值，包含所有文件
 #   binary: 只包含可执行文件
 #   source: 只包含源码文件
-BUILD_TYPE="${BUILD_TYPE:-full}"
+build_type="${build_type:-full}"
 # 构建完，删除源码文件 默认'false'
-CLEANUP_SOURCE="${CLEANUP_SOURCE:-true}"
+cleanup_source="${cleanup_source:-true}"
 # 构建完，删除构建临时文件标志变量 默认'true'
-CLEANUP_BUILD_TEMP="${CLEANUP_BUILD_TEMP:-true}"
+cleanup_build_temp="${cleanup_build_temp:-true}"
 
 # 安装目录
-PREFIX="${PREFIX:-/usr/lib/python${PY_MAIN_VERSION}-${PACKAGER}}"
+prefix="${prefix:-/usr/lib/python${py_main_version}-${packager}}"
 # 配置参数
-if [ -z "${CONFIGURE_ARGS+set}" ]; then
-    CONFIGURE_ARGS=$(cat << EOF
---prefix=${PREFIX}
+if [ -z "${configure_args+set}" ]; then
+    configure_args=$(cat << EOF
+--prefix=${prefix}
 EOF
 )
 fi
 # free-threaded (no GIL) 配置参数
-if [ -z "${FREE_THREADED_CONFIGURE_ARGS+set}" ]; then
-    FREE_THREADED_CONFIGURE_ARGS=$(cat << EOF
---prefix=${PREFIX}
+if [ -z "${free_threaded_configure_args+set}" ]; then
+    free_threaded_configure_args=$(cat << EOF
+--prefix=${prefix}
 --disable-gil
 EOF
 )
@@ -55,32 +55,30 @@ fi
 # GITTAG=		git --git-dir $(srcdir)/.git describe --all --always --dirty
 # GITBRANCH=	git --git-dir $(srcdir)/.git name-rev --name-only HEAD
 GITVERSION="${GITVERSION:-}"
-GITTAG="${GITTAG:-echo tags/v${PY_FULL_VERSION}}"
+GITTAG="${GITTAG:-echo tags/v${py_full_version}}"
 GITBRANCH="${GITBRANCH:-echo main}"
 # platform.python_revision() = GITVERSION or ''
 # platform.python_build()[0] = GITTAG + ':' + GITVERSION or GITTAG or 'main:' + GITVERSION or GITBRANCH or 'main'
 # platform.python_branch() = GITTAG or GITBRANCH
 
-# 根据 FREE_THREADED 选项添加 nogil 标记
-if [ "$FREE_THREADED" = "true" ]; then
-    CONFIGURE_ARGS="${FREE_THREADED_CONFIGURE_ARGS}"
-    VERSION_VARIANT_SUFFIX="${VERSION_VARIANT_SUFFIX:-+nogil}"
-    PACKAGE_VARIANT_SUFFIX="${PACKAGE_VARIANT_SUFFIX:--nogil}"
+# 根据 free_threaded 选项添加 nogil 标记
+if [ "$free_threaded" = "true" ]; then
+    configure_args="${free_threaded_configure_args}"
+    version_variant_suffix="${version_variant_suffix:-+nogil}"
+    package_variant_suffix="${package_variant_suffix:--nogil}"
     # python 可执行文件后缀
-    EXECUTABLE_VARIANT_SUFFIX="${EXECUTABLE_VARIANT_SUFFIX:-t}"
+    executable_variant_suffix="${executable_variant_suffix:-t}"
 else
-    VERSION_VARIANT_SUFFIX="${VERSION_VARIANT_SUFFIX:-}"
-    PACKAGE_VARIANT_SUFFIX="${PACKAGE_VARIANT_SUFFIX:-}"
-    EXECUTABLE_VARIANT_SUFFIX="${EXECUTABLE_VARIANT_SUFFIX:-}"
+    version_variant_suffix="${version_variant_suffix:-}"
+    package_variant_suffix="${package_variant_suffix:-}"
+    executable_variant_suffix="${executable_variant_suffix:-}"
 fi
 
 # deb 包名
-DEB_PACKAGE_NAME="${DEB_PACKAGE_NAME:-python${PY_MAIN_VERSION}-${PACKAGER}${PACKAGE_VARIANT_SUFFIX}}"
+deb_package_name="${deb_package_name:-python${py_main_version}-${packager}${package_variant_suffix}}"
 # deb 包版本号
-DEB_PACKAGE_VERSION="${DEB_PACKAGE_VERSION:-${PY_FULL_VERSION}-${DEBIAN_REVISION}}"
+deb_package_version="${deb_package_version:-${py_full_version}-${debian_revision}}"
 # 架构
-ARCH="${ARCH:-$(dpkg --print-architecture)}"
+arch="${arch:-$(dpkg --print-architecture)}"
 # 构建目录，构建产物在构建目录的上层目录
-BUILD_DIR="${BUILD_DIR:-$(pwd -P)/${DEB_PACKAGE_NAME}}"
-# 产物目录（构建目录的上级）
-OUTPUT_DIR="${OUTPUT_DIR:-$(dirname "$BUILD_DIR")}"
+build_dir="${build_dir:-$(pwd -P)/${deb_package_name}}"
