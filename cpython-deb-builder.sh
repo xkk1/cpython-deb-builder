@@ -117,11 +117,35 @@ if [ -z "${configure_args+set}" ]; then
 EOF
 )
 fi
-# free-threaded (no GIL) 配置参数
+# free-threaded (no GIL) 配置参数，一行一个参数
 if [ -z "${free_threaded_configure_args+set}" ]; then
     free_threaded_configure_args=$(cat << EOF
 --prefix=${prefix}
 --disable-gil
+EOF
+)
+fi
+
+# 编译依赖，一行一个依赖
+if [ -z "${build_depends+set}" ]; then
+    build_depends=$(cat << EOF
+build-essential
+clang-19
+pkg-config
+libssl-dev
+zlib1g-dev
+libbz2-dev
+liblzma-dev
+libffi-dev
+libreadline-dev
+libsqlite3-dev
+libncurses-dev
+libgdbm-dev
+libgdbm-compat-dev
+libnss3-dev
+uuid-dev
+tk-dev
+libzstd-dev
 EOF
 )
 fi
@@ -180,7 +204,7 @@ echo "构建目录: ${build_dir}"
 output_dir="$(dirname "$build_dir")"
 echo "产物目录: ${output_dir}"
 echo "配置参数: ./configure \\"
-echo "$(printf '%s\n' "$configure_args" \
+printf '%s\n' "$(printf '%s\n' "$configure_args" \
  | sed '$!s/$/ \\/' \
  | sed 's/^/\t/')"
 echo "构建类型: dpkg-buildpackage --build=${build_type}"
@@ -191,6 +215,11 @@ else
 fi
 echo "构建完，删除源码文件: ${cleanup_source}"
 echo "构建完，删除构建临时文件: ${cleanup_build_temp}"
+echo "依赖："
+printf '%s\n' "$(printf '%s' "$build_depends" \
+ | tr ' ' '\n' \
+ | sed '$!s/$/,/' \
+ | sed 's/^/  /')"
 echo "===================================================="
 printf '%s' "准备生成构建环境，确认信息无误后按 Enter 继续..."
 read _
@@ -242,23 +271,10 @@ Maintainer: ${maintainer}
 Rules-Requires-Root: no
 Build-Depends:
  debhelper-compat (= 13),
- build-essential,
- clang-19,
- pkg-config,
- libssl-dev,
- zlib1g-dev,
- libbz2-dev,
- liblzma-dev,
- libffi-dev,
- libreadline-dev,
- libsqlite3-dev,
- libncurses-dev,
- libgdbm-dev,
- libgdbm-compat-dev,
- libnss3-dev,
- uuid-dev,
- tk-dev,
- libzstd-dev,
+$(printf '%s' "$build_depends" \
+ | tr ' ' '\n' \
+ | sed '$!s/$/,/' \
+ | sed 's/^/  /')
 Standards-Version: 4.6.2
 Homepage: https://www.python.org/
 #Vcs-Browser: https://salsa.debian.org/debian/${deb_package_name}
@@ -494,24 +510,24 @@ chmod 0755 'debian/prerm'
 
 
 # 构建参数
-DPKG_ARGS="--build=$build_type"
+dpkg_args="--build=$build_type"
 
 # 签名处理
 if [ -n "$sign_key" ]; then
     echo "启用签名，GPG KEY = $sign_key"
-    DPKG_ARGS="$DPKG_ARGS -k$sign_key"
+    dpkg_args="$dpkg_args -k$sign_key"
 else
     echo "不启用签名"
-    DPKG_ARGS="$DPKG_ARGS -us -uc"
+    dpkg_args="$dpkg_args -us -uc"
 fi
 
 # 执行构建
-echo "构建命令: dpkg-buildpackage $DPKG_ARGS"
+echo "构建命令: dpkg-buildpackage $dpkg_args"
 
 printf '%s' "构建环境生成完毕，按 Enter 开始构建 deb 包..."
 read _
 
-dpkg-buildpackage $DPKG_ARGS
+dpkg-buildpackage $dpkg_args
 
 # 前往构建产物目录——构建目录的上层目录
 cd "$output_dir"

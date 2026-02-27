@@ -41,11 +41,35 @@ if [ -z "${configure_args+set}" ]; then
 EOF
 )
 fi
-# free-threaded (no GIL) 配置参数
+# free-threaded (no GIL) 配置参数，一行一个参数
 if [ -z "${free_threaded_configure_args+set}" ]; then
     free_threaded_configure_args=$(cat << EOF
 --prefix=${prefix}
 --disable-gil
+EOF
+)
+fi
+
+# 编译依赖，一行一个依赖
+if [ -z "${build_depends+set}" ]; then
+    build_depends=$(cat << EOF
+build-essential
+clang-19
+pkg-config
+libssl-dev
+zlib1g-dev
+libbz2-dev
+liblzma-dev
+libffi-dev
+libreadline-dev
+libsqlite3-dev
+libncurses-dev
+libgdbm-dev
+libgdbm-compat-dev
+libnss3-dev
+uuid-dev
+tk-dev
+libzstd-dev
 EOF
 )
 fi
