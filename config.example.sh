@@ -106,3 +106,9 @@ deb_package_version="${deb_package_version:-${py_full_version}-${debian_revision
 arch="${arch:-$(dpkg --print-architecture)}"
 # 构建目录，构建产物在构建目录的上层目录
 build_dir="${build_dir:-$(pwd -P)/${deb_package_name}}"
+# 构建环境 deb 包名
+buildenv_deb_package_name="${buildenv_deb_package_name:-${deb_package_name}-buildenv}"
+# 构建环境 deb 包版本号
+buildenv_deb_package_version="${buildenv_deb_package_version:-${py_full_version}}"
+# 构建环境 构建目录，构建产物在构建目录的上层目录
+buildenv_build_dir="${buildenv_build_dir:-$(pwd -P)/${buildenv_deb_package_name}}"

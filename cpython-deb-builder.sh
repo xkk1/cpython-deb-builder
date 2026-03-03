@@ -182,6 +182,12 @@ deb_package_version="${deb_package_version:-${py_full_version}-${debian_revision
 arch="${arch:-$(dpkg --print-architecture)}"
 # 构建目录，构建产物在构建目录的上层目录
 build_dir="${build_dir:-$(pwd -P)/${deb_package_name}}"
+# 构建环境 deb 包名
+buildenv_deb_package_name="${buildenv_deb_package_name:-${deb_package_name}-buildenv}"
+# 构建环境 deb 包版本号
+buildenv_deb_package_version="${buildenv_deb_package_version:-${py_full_version}}"
+# 构建环境 构建目录，构建产物在构建目录的上层目录
+buildenv_build_dir="${buildenv_build_dir:-$(pwd -P)/${buildenv_deb_package_name}}"
 
 
 # 输出构建信息
@@ -207,20 +213,85 @@ echo "配置参数: ./configure \\"
 printf '%s\n' "$(printf '%s\n' "$configure_args" \
  | sed '$!s/$/ \\/' \
  | sed 's/^/\t/')"
+# 构建参数
+dpkg_args="--build=$build_type"
 echo "构建类型: dpkg-buildpackage --build=${build_type}"
 if [ -n "$sign_key" ]; then
     echo "签名密钥: ${sign_key}"
+    dpkg_args="$dpkg_args -k$sign_key"
 else
     echo "不启用签名"
+    dpkg_args="$dpkg_args -us -uc"
 fi
 echo "构建完，删除源码文件: ${cleanup_source}"
 echo "构建完，删除构建临时文件: ${cleanup_build_temp}"
-echo "依赖："
-printf '%s\n' "$(printf '%s' "$build_depends" \
+echo "===================================================="
+
+# 记录当前工作目录为原始目录
+original_dir=$(pwd)
+
+printf '%s' "准备生成构建环境 deb 包 ${buildenv_deb_package_name}，请确认信息无误后按 Enter 继续..."
+read _
+
+# 创建构建目录
+rm -rf "$buildenv_build_dir"
+mkdir -p "$buildenv_build_dir"
+cd "$buildenv_build_dir"
+rm -rf "debian"
+mkdir -p "debian"
+
+echo '创建构建环境 deb 包 debian/control'
+cat > 'debian/control' <<EOF
+Source: ${buildenv_deb_package_name}
+Section: devel
+Priority: optional
+Maintainer: ${maintainer}
+Build-Depends: 
+  debhelper-compat (= 13)
+Standards-Version: 4.6.2
+Rules-Requires-Root: no
+
+Package: ${buildenv_deb_package_name}
+Architecture: all
+Depends:
+ $(printf '%s' "$build_depends" \
  | tr ' ' '\n' \
  | sed '$!s/$/,/' \
- | sed 's/^/  /')"
-echo "===================================================="
+ | sed 's/^/  /')
+Description: Build environment for custom CPython (${packager})
+ Meta package that installs all required development
+ dependencies for building custom CPython.
+EOF
+
+echo '创建构建环境 deb 包 debian/changelog'
+cat > debian/changelog <<EOF
+${buildenv_deb_package_name} (${buildenv_deb_package_version}) unstable; urgency=medium
+
+  * Initial release.
+
+ -- ${maintainer}  $(date -R)
+EOF
+
+echo '创建构建环境 deb 包 debian/rules'
+cat > debian/rules <<EOF
+#!/usr/bin/make -f
+%:
+	dh \$@
+EOF
+chmod +x debian/rules
+
+mkdir -p 'debian/source'
+echo '创建构建环境 deb 包 debian/source/format'
+cat > 'debian/source/format' <<EOF
+3.0 (native)
+EOF
+
+echo "正在构建“构建环境 deb 包”"
+dpkg-buildpackage -us -uc -b
+
+cd "$original_dir"
+
+
 printf '%s' "准备生成构建环境，确认信息无误后按 Enter 继续..."
 read _
 
@@ -508,19 +579,6 @@ exit 0
 EOF
 chmod 0755 'debian/prerm'
 
-
-# 构建参数
-dpkg_args="--build=$build_type"
-
-# 签名处理
-if [ -n "$sign_key" ]; then
-    echo "启用签名，GPG KEY = $sign_key"
-    dpkg_args="$dpkg_args -k$sign_key"
-else
-    echo "不启用签名"
-    dpkg_args="$dpkg_args -us -uc"
-fi
-
 # 执行构建
 echo "构建命令: dpkg-buildpackage $dpkg_args"
 
@@ -548,4 +606,5 @@ fi
 pwd
 ls -lh
 
+cd "${original_dir}
 echo "构建完成"
