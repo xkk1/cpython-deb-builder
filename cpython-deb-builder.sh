@@ -24,8 +24,6 @@ usage=$(cat << EOF
     -h, --help, --帮助      显示帮助信息
     -v, --version, --版本   显示版本信息
     -c, --config <文件>     指定配置文件
-    --disable-gil           禁用 GIL，覆盖配置文件
-    --enable-gil            启用 GIL，覆盖配置文件
 EOF
 )
 # 参数解析
@@ -53,14 +51,6 @@ while [ $# -gt 0 ]; do
             fi
             shift 2
             ;;
-        --disable-gil)
-            free_threaded="true"
-            shift
-            ;;
-        --enable-gil)
-            free_threaded="false"
-            shift
-            ;;
         --)
             shift
             break
@@ -87,7 +77,7 @@ py_main_version="${py_main_version:-${py_major}.${py_minor}}"
 py_full_version="${py_full_version:-${py_main_version}.${py_micro}${py_release}}"
 # python 源码文件
 PY_SRC="Python-${py_full_version}.tar.xz"
-# 是否启用 free-threaded (no GIL) 支持，默认关闭 'false' 启用 ‘true'
+# 是否启用 free-threaded (no GIL) 支持，关闭 'false' 启用 ‘true'
 free_threaded="${free_threaded:-false}"
 # 打包者
 packager="${packager:-xkk}"
@@ -114,14 +104,6 @@ prefix="${prefix:-/usr/lib/python${py_main_version}-${packager}}"
 if [ -z "${configure_args+set}" ]; then
     configure_args=$(cat << EOF
 --prefix=${prefix}
-EOF
-)
-fi
-# free-threaded (no GIL) 配置参数，一行一个参数
-if [ -z "${free_threaded_configure_args+set}" ]; then
-    free_threaded_configure_args=$(cat << EOF
---prefix=${prefix}
---disable-gil
 EOF
 )
 fi
@@ -163,7 +145,6 @@ GITBRANCH="${GITBRANCH:-echo main}"
 
 # 根据 free_threaded 选项添加 nogil 标记
 if [ "$free_threaded" = "true" ]; then
-    configure_args="${free_threaded_configure_args}"
     version_variant_suffix="${version_variant_suffix:-+nogil}"
     package_variant_suffix="${package_variant_suffix:--nogil}"
     # python 可执行文件后缀
@@ -199,7 +180,6 @@ else
     printf '%s\n' "，使用默认配置"
 fi
 echo "Python 版本号: ${py_full_version}"
-echo "free-threaded (no GIL) 支持: ${free_threaded}"
 echo "deb 包名: ${deb_package_name}"
 echo "deb 包架构: ${arch}"
 echo "deb 包版本号: ${deb_package_version}"
