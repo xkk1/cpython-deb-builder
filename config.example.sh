@@ -11,7 +11,7 @@ py_main_version="${py_main_version:-${py_major}.${py_minor}}"
 py_full_version="${py_full_version:-${py_main_version}.${py_micro}${py_release}}"
 # python 源码文件
 PY_SRC="Python-${py_full_version}.tar.xz"
-# 是否启用 free-threaded (no GIL) 支持，默认关闭 'false' 启用 ‘true'
+# 是否启用 free-threaded (no GIL) 支持，关闭 'false' 启用 ‘true'
 free_threaded="${free_threaded:-false}"
 # 打包者
 packager="${packager:-xkk}"
@@ -38,14 +38,6 @@ prefix="${prefix:-/usr/lib/python${py_main_version}-${packager}}"
 if [ -z "${configure_args+set}" ]; then
     configure_args=$(cat << EOF
 --prefix=${prefix}
-EOF
-)
-fi
-# free-threaded (no GIL) 配置参数，一行一个参数
-if [ -z "${free_threaded_configure_args+set}" ]; then
-    free_threaded_configure_args=$(cat << EOF
---prefix=${prefix}
---disable-gil
 EOF
 )
 fi
@@ -87,7 +79,6 @@ GITBRANCH="${GITBRANCH:-echo main}"
 
 # 根据 free_threaded 选项添加 nogil 标记
 if [ "$free_threaded" = "true" ]; then
-    configure_args="${free_threaded_configure_args}"
     version_variant_suffix="${version_variant_suffix:-+nogil}"
     package_variant_suffix="${package_variant_suffix:--nogil}"
     # python 可执行文件后缀
@@ -98,10 +89,12 @@ else
     executable_variant_suffix="${executable_variant_suffix:-}"
 fi
 
+# 用于 Debian 版本号的 “发行版后缀字符串” （例如 ~deb13 / ~ubuntu24.04）。
+deb_dist_suffix=$(make_deb_dist_suffix)
 # deb 包名
 deb_package_name="${deb_package_name:-python${py_main_version}-${packager}${package_variant_suffix}}"
 # deb 包版本号
-deb_package_version="${deb_package_version:-${py_full_version}-${debian_revision}}"
+deb_package_version="${deb_package_version:-${py_full_version}-${debian_revision}${deb_dist_suffix}}"
 # 架构
 arch="${arch:-$(dpkg --print-architecture)}"
 # 构建目录，构建产物在构建目录的上层目录
@@ -109,6 +102,6 @@ build_dir="${build_dir:-$(pwd -P)/${deb_package_name}}"
 # 构建环境 deb 包名
 buildenv_deb_package_name="${buildenv_deb_package_name:-${deb_package_name}-buildenv}"
 # 构建环境 deb 包版本号
-buildenv_deb_package_version="${buildenv_deb_package_version:-${py_full_version}}"
+buildenv_deb_package_version="${buildenv_deb_package_version:-${py_full_version}-${debian_revision}}"
 # 构建环境 构建目录，构建产物在构建目录的上层目录
 buildenv_build_dir="${buildenv_build_dir:-$(pwd -P)/${buildenv_deb_package_name}}"

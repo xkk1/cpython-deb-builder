@@ -65,6 +65,31 @@ while [ $# -gt 0 ]; do
     esac
 done
 
+make_deb_dist_suffix() {
+    # 1️⃣ 文件必须存在且可读
+    [ -r /etc/os-release ] || {
+        echo ""
+        return 0
+    }
+
+    # 2️⃣ 在子 shell 中加载，避免污染当前环境
+    (
+        # 禁止错误输出
+        set -a
+        . /etc/os-release 2>/dev/null || exit 1
+        set +a
+
+        # 必须有 ID 和 VERSION_ID
+        [ -n "$ID" ] || exit 1
+        [ -n "$VERSION_ID" ] || exit 1
+
+        case "$ID" in
+            debian) printf "~deb%s" "$VERSION_ID" ;;
+            *)       printf "~%s%s" "$ID" "$VERSION_ID" ;;
+        esac
+    ) 2>/dev/null || echo ""
+}
+
 # 默认配置
 # 准备 Python 源码文件 Python-x.y.z.tar.xz，没有脚本从官网下载
 py_major="${py_major:-3}"  # 主版本 x
@@ -155,10 +180,12 @@ else
     executable_variant_suffix="${executable_variant_suffix:-}"
 fi
 
+# 用于 Debian 版本号的 “发行版后缀字符串” （例如 ~deb13 / ~ubuntu24.04）。
+deb_dist_suffix=$(make_deb_dist_suffix)
 # deb 包名
 deb_package_name="${deb_package_name:-python${py_main_version}-${packager}${package_variant_suffix}}"
 # deb 包版本号
-deb_package_version="${deb_package_version:-${py_full_version}-${debian_revision}}"
+deb_package_version="${deb_package_version:-${py_full_version}-${debian_revision}${deb_dist_suffix}}"
 # 架构
 arch="${arch:-$(dpkg --print-architecture)}"
 # 构建目录，构建产物在构建目录的上层目录
@@ -166,8 +193,8 @@ build_dir="${build_dir:-$(pwd -P)/${deb_package_name}}"
 # 构建环境 deb 包名
 buildenv_deb_package_name="${buildenv_deb_package_name:-${deb_package_name}-buildenv}"
 # 构建环境 deb 包版本号
-buildenv_deb_package_version="${buildenv_deb_package_version:-${py_full_version}}"
-# 构建环境 构建目录，构建产物在构建目录的上层目录
+buildenv_deb_package_version="${buildenv_deb_package_version:-${py_full_version}-${debian_revision}}"
+# 构建环境 deb 包构建目录，构建产物在构建目录的上层目录
 buildenv_build_dir="${buildenv_build_dir:-$(pwd -P)/${buildenv_deb_package_name}}"
 
 
@@ -180,6 +207,9 @@ else
     printf '%s\n' "，使用默认配置"
 fi
 echo "Python 版本号: ${py_full_version}"
+echo "构建环境 deb 包名: ${buildenv_deb_package_name}"
+echo "构建环境 deb 包版本号: ${buildenv_deb_package_version}"
+echo "构建环境 deb 包构建目录: ${buildenv_build_dir}"
 echo "deb 包名: ${deb_package_name}"
 echo "deb 包架构: ${arch}"
 echo "deb 包版本号: ${deb_package_version}"
