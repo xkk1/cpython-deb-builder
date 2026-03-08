@@ -32,40 +32,6 @@ cleanup_source="${cleanup_source:-true}"
 # 构建完，删除构建临时文件标志变量 默认'true'
 cleanup_build_temp="${cleanup_build_temp:-true}"
 
-# 安装目录
-prefix="${prefix:-/usr/lib/python${py_main_version}-${packager}}"
-# 配置参数
-if [ -z "${configure_args+set}" ]; then
-    configure_args=$(cat << EOF
---prefix=${prefix}
-EOF
-)
-fi
-
-# 编译依赖，一行一个依赖
-if [ -z "${build_depends+set}" ]; then
-    build_depends=$(cat << EOF
-build-essential
-clang-19
-pkg-config
-libssl-dev
-zlib1g-dev
-libbz2-dev
-liblzma-dev
-libffi-dev
-libreadline-dev
-libsqlite3-dev
-libncurses-dev
-libgdbm-dev
-libgdbm-compat-dev
-libnss3-dev
-uuid-dev
-tk-dev
-libzstd-dev
-EOF
-)
-fi
-
 # Makefile Git 信息替换
 # GITVERSION=	git --git-dir $(srcdir)/.git rev-parse --short HEAD
 # GITTAG=		git --git-dir $(srcdir)/.git describe --all --always --dirty
@@ -89,6 +55,40 @@ else
     executable_variant_suffix="${executable_variant_suffix:-}"
 fi
 
+# 安装目录
+prefix="${prefix:-/usr/lib/python${py_main_version}${executable_variant_suffix}-${packager}}"
+# 配置参数
+if [ -z "${configure_args+set}" ]; then
+    configure_args=$(cat << EOF
+--prefix=${prefix}
+EOF
+)
+fi
+
+# 编译依赖，一行一个依赖
+if [ -z "${deb_build_depends+set}" ]; then
+    deb_build_depends=$(cat << EOF
+build-essential
+clang-19
+pkg-config
+libssl-dev
+zlib1g-dev
+libbz2-dev
+liblzma-dev
+libffi-dev
+libreadline-dev
+libsqlite3-dev
+libncurses-dev
+libgdbm-dev
+libgdbm-compat-dev
+libnss3-dev
+uuid-dev
+tk-dev
+libzstd-dev
+EOF
+)
+fi
+
 # 用于 Debian 版本号的 “发行版后缀字符串” （例如 ~deb13 / ~ubuntu24.04）。
 deb_dist_suffix=$(make_deb_dist_suffix)
 # deb 包名
@@ -103,5 +103,5 @@ build_dir="${build_dir:-$(pwd -P)/${deb_package_name}}"
 buildenv_deb_package_name="${buildenv_deb_package_name:-${deb_package_name}-buildenv}"
 # 构建环境 deb 包版本号
 buildenv_deb_package_version="${buildenv_deb_package_version:-${py_full_version}-${debian_revision}}"
-# 构建环境 构建目录，构建产物在构建目录的上层目录
+# 构建环境 deb 包构建目录，构建产物在构建目录的上层目录
 buildenv_build_dir="${buildenv_build_dir:-$(pwd -P)/${buildenv_deb_package_name}}"
