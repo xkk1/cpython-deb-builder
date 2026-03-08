@@ -18,7 +18,8 @@ version='0.0.0'
 # 配置文件
 config_file=
 # 帮助信息
-usage=$(cat << EOF
+usage=$(cat <<EOF
+CPython Debian 自动打包脚本，版本 ${version}
 用法：$0 [选项]
 选项：
     -h, --help, --帮助      显示帮助信息
