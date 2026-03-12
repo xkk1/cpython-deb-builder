@@ -120,7 +120,7 @@ sign_key="${sign_key:-}"
 #   source: 只包含源码文件
 build_type="${build_type:-full}"
 # 构建完，删除源码文件 默认'false'
-cleanup_source="${cleanup_source:-true}"
+cleanup_source="${cleanup_source:-false}"
 # 构建完，删除构建临时文件标志变量 默认'true'
 cleanup_build_temp="${cleanup_build_temp:-true}"
 
@@ -149,6 +149,8 @@ fi
 
 # 安装目录
 prefix="${prefix:-/usr/lib/python${py_main_version}${executable_variant_suffix}-${packager}}"
+# site-packages 安装目录
+site_packages="${site_packages:-${prefix}/lib/python${py_main_version}${executable_variant_suffix}/site-packages}"
 # 配置参数
 if [ -z "${configure_args+set}" ]; then
     configure_args=$(cat << EOF
@@ -413,6 +415,18 @@ $(printf '%s\n' "$configure_args" \
 		sed -i 's/^GITTAG=.*\$\$/GITTAG=		$(escape_sed "$GITTAG")/' 'Makefile'; \\
 		sed -i 's/^GITBRANCH=.*\$\$/GITBRANCH=	$(escape_sed "$GITBRANCH")/' 'Makefile'; \\
 	fi
+
+# override_dh_auto_test:
+# 	# dh_auto_test
+# 	echo "=== 运行测试 ==="
+
+# override_dh_auto_install:
+# 	dh_auto_install
+
+# 	echo "=== 清理 Python 安装产生的缓存文件 ==="
+# 	find . -type d -name "__pycache__" -exec rm -rf {} +
+# 	find . -type f \( -name "*.pyc" -o -name "*.pyo" \) -delete
+
 EOF
 chmod 0755 'debian/rules'
 
@@ -617,5 +631,5 @@ fi
 pwd
 ls -lh
 
-cd "${original_dir}
+cd "${original_dir}"
 echo "构建完成"
